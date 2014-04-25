@@ -33,7 +33,8 @@ public class USBDeviceBroadcastReceiver extends BroadcastReceiver{
             LocalBroadcastManager.getInstance(context).sendBroadcast(new Intent(UsbManager.ACTION_USB_DEVICE_ATTACHED));
 
         }else if(intent.getAction().equals(USB_DEVICE_DETACHED)){
-
+//TODO Handle this appropriately.
+            System.exit(1);
             Utility.makeToastShort(context,"USB Device Detached");
             //Start intent service to create drivers.
             Intent serviceIntent = new Intent(context.getApplicationContext(), USBDriverIntentService.class);

@@ -7,13 +7,19 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.MediaController;
+import android.widget.VideoView;
 
 import java.util.HashMap;
 
@@ -43,7 +49,7 @@ public class H2OBotStartActivity extends Activity {
      * If set, will toggle the system UI visibility upon interaction. Otherwise,
      * will show the system UI visibility upon interaction.
      */
-    private static final boolean TOGGLE_ON_CLICK = true;
+    private static final boolean TOGGLE_ON_CLICK = false;
 
     /**
      * The flags to pass to {@link SystemUiHider#getInstance}.
@@ -63,6 +69,9 @@ public class H2OBotStartActivity extends Activity {
     public static final String LOG_TAG = H2OBotStartActivity.class.getSimpleName();
 
 
+
+    //Gesture recogniser
+    GestureDetector gDetector = null;
     /**
      * Statistics Pane Manager that is responsible to maintain individual
      * statistics elements
@@ -103,6 +112,8 @@ public class H2OBotStartActivity extends Activity {
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        this.getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, WindowManager.LayoutParams.FLAG_FULLSCREEN);
 
 		setContentView(R.layout.activity_h2o_bot_start);
 
@@ -156,21 +167,22 @@ public class H2OBotStartActivity extends Activity {
 
 		// Set up the user interaction to manually show or hide the system UI.
 		contentView.setOnClickListener(new View.OnClickListener() {
-			@Override
-			public void onClick(View view) {
-				if (TOGGLE_ON_CLICK) {
-					mSystemUiHider.toggle();
-				} else {
-					mSystemUiHider.show();
-				}
-			}
-		});
+            @Override
+            public void onClick(View view) {
+                if (TOGGLE_ON_CLICK) {
+                    mSystemUiHider.toggle();
+                } else {
+                    mSystemUiHider.show();
+                }
+            }
+        });
 
 		// Upon interacting with UI controls, delay any scheduled hide()
 		// operations to prevent the jarring behavior of controls going away
 		// // while interacting with the UI.
 		// findViewById(R.id.dummy_button).setOnTouchListener(
 		// mDelayHideTouchListener);
+
 
 		// Set up statistics pane
 
@@ -180,12 +192,24 @@ public class H2OBotStartActivity extends Activity {
 
         //Registering receiver
         registerUSBDataReceiver();
-
-
-
 	}
 
 
+//    private static final String VIDEO_URL="http://www.law.duke.edu/cspd/contest/finalists/viewentry.php?file=docandyou";
+    private static final String VIDEO_URL="rtsp://192.168.2.10:8554/";
+
+    private void setUpVideo(){
+//        setContentView(R.layout.activity_main);
+
+        VideoView videoView = (VideoView) findViewById(R.id.video_view);
+        MediaController mediaController = new MediaController(this);
+        mediaController.setAnchorView(videoView);
+        mediaController.setMediaPlayer(videoView);
+        Uri video = Uri.parse(VIDEO_URL);
+        videoView.setMediaController(mediaController);
+        videoView.setVideoURI(video);
+        videoView.start();
+    }
     public void registerUSBDataReceiver(){
         //Registering Local Broadcast Receiver for data over USB
         if(mLocalBroadcastManager==null) {
@@ -213,13 +237,54 @@ public class H2OBotStartActivity extends Activity {
 	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
+        setUpVideo();
+//        gDetector=new GestureDetector(this,new GestureDetector.OnGestureListener(){
+//
+//            @Override
+//            public boolean onDown(MotionEvent motionEvent) {
+//                System.out.println("onDown DETECTED");
+//                return false;
+//            }
+//
+//            @Override
+//            public void onShowPress(MotionEvent motionEvent) {
+//
+//            }
+//
+//            @Override
+//            public boolean onSingleTapUp(MotionEvent motionEvent) {
+//                return false;
+//            }
+//
+//            @Override
+//            public boolean onScroll(MotionEvent motionEvent, MotionEvent motionEvent2, float v, float v2) {
+//                return false;
+//            }
+//
+//            @Override
+//            public void onLongPress(MotionEvent motionEvent) {
+//
+//            }
+//
+//            @Override
+//            public boolean onFling(MotionEvent motionEvent, MotionEvent motionEvent2, float v, float v2) {
+//                System.out.println("FLING DETECTED");
+//                return false;
+//            }
+//        });
+
 		// Trigger the initial hide() shortly after the activity has been
 		// created, to briefly hint to the user that UI controls
 		// are available.
 		delayedHide(100);
 	}
-
+//    @Override
+//    public boolean onTouchEvent(MotionEvent me) {
+//        return gDetector.onTouchEvent(me);
+//    }
 	// ADDED
+
+
 
 	private void setActionBarVisible(boolean visibility) {
 		ActionBar actionBar = getActionBar();
@@ -230,6 +295,7 @@ public class H2OBotStartActivity extends Activity {
 	}
 
 	// END ADDED
+//
 
 	/**
 	 * Touch listener to use for in-layout UI controls to delay hiding the
@@ -239,6 +305,7 @@ public class H2OBotStartActivity extends Activity {
 	View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
 		@Override
 		public boolean onTouch(View view, MotionEvent motionEvent) {
+
 			if (AUTO_HIDE) {
 				delayedHide(AUTO_HIDE_DELAY_MILLIS);
 			}
