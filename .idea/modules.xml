@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/H2OBot/H2OBot.iml" filepath="$PROJECT_DIR$/H2OBot/H2OBot.iml" />
       <module fileurl="file://$PROJECT_DIR$/H2OBot/library/UsbSerialLibrary/UsbSerialLibrary.iml" filepath="$PROJECT_DIR$/H2OBot/library/UsbSerialLibrary/UsbSerialLibrary.iml" />
+      <module fileurl="file://$USER_HOME$/Desktop/VLC/VitamioBundle-master/vitamio/vitamio.iml" filepath="$USER_HOME$/Desktop/VLC/VitamioBundle-master/vitamio/vitamio.iml" />
     </modules>
   </component>
 </project>

@@ -179,11 +179,15 @@
                 android:layout_toLeftOf="@+id/stats_pane_right"
                 android:layout_above="@+id/joystick_pane"
                 android:id="@id/video_pane">
-
-                <VideoView
-                    android:layout_width="fill_parent"
-                    android:layout_height="fill_parent"
-                    android:id="@+id/video_view"
+                <!--<VideoView-->
+                    <!--android:layout_width="fill_parent"-->
+                    <!--android:layout_height="fill_parent"-->
+                    <!--android:id="@+id/video_view"-->
+                    <!--android:layout_gravity="center" />-->
+                <SurfaceView
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:id="@+id/video_surface_view"
                     android:layout_gravity="center" />
             </FrameLayout>
 

@@ -7,6 +7,8 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.PixelFormat;
+import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -15,6 +17,8 @@ import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
@@ -23,7 +27,13 @@ import android.widget.VideoView;
 
 import java.util.HashMap;
 
+import edu.scu.cs.robotics.customviews.JoystickPane;
+import edu.scu.cs.robotics.customviews.StatisticsFrameElement;
+import edu.scu.cs.robotics.customviews.StatisticsPaneManager;
 import edu.scu.cs.robotics.util.SystemUiHider;
+import edu.scu.cs.robotics.util.Utility;
+import io.vov.vitamio.LibsChecker;
+import io.vov.vitamio.MediaPlayer;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -31,7 +41,7 @@ import edu.scu.cs.robotics.util.SystemUiHider;
  * 
  * @see SystemUiHider
  */
-public class H2OBotStartActivity extends Activity {
+public class H2OBotStartActivity extends Activity implements MediaPlayer.OnBufferingUpdateListener, MediaPlayer.OnCompletionListener, MediaPlayer.OnPreparedListener, MediaPlayer.OnVideoSizeChangedListener, SurfaceHolder.Callback {
 
     /**
      * Whether or not the system UI should be auto-hidden after
@@ -197,18 +207,56 @@ public class H2OBotStartActivity extends Activity {
 
 //    private static final String VIDEO_URL="http://www.law.duke.edu/cspd/contest/finalists/viewentry.php?file=docandyou";
     private static final String VIDEO_URL="rtsp://192.168.2.10:8554/";
-
+    private int mVideoWidth;
+    private int mVideoHeight;
+    private MediaPlayer mMediaPlayer;
+    private SurfaceView mPreview;
+    private SurfaceHolder holder;
+    private boolean mIsVideoSizeKnown = false;
+    private boolean mIsVideoReadyToBePlayed = false;
     private void setUpVideo(){
 //        setContentView(R.layout.activity_main);
+        if (!LibsChecker.checkVitamioLibs(this)) {
+            Utility.makeToastShort(this,"Video lib loading error.");
+            return;
+        }
+         mPreview = (SurfaceView) findViewById(R.id.video_surface_view);
+         holder = mPreview.getHolder();
+        holder.addCallback(this);
+        holder.setFormat(PixelFormat.RGBA_8888);
+        Bundle extras = getIntent().getExtras();
 
-        VideoView videoView = (VideoView) findViewById(R.id.video_view);
-        MediaController mediaController = new MediaController(this);
-        mediaController.setAnchorView(videoView);
-        mediaController.setMediaPlayer(videoView);
-        Uri video = Uri.parse(VIDEO_URL);
-        videoView.setMediaController(mediaController);
-        videoView.setVideoURI(video);
-        videoView.start();
+
+
+//        VideoView videoView = (VideoView) findViewById(R.id.video_view);
+//        MediaController mediaController = new MediaController(this);
+//        mediaController.setAnchorView(videoView);
+//        mediaController.setMediaPlayer(videoView);
+//        Uri video = Uri.parse(VIDEO_URL);
+//        videoView.setMediaController(mediaController);
+//        videoView.setVideoURI(video);
+//        videoView.start();
+    }
+
+
+    private void playVideo(){
+        doCleanUp();
+        try {
+            Utility.makeToastShort(this,"Playing from URL "+VIDEO_URL);
+            mMediaPlayer = new MediaPlayer(this);
+            mMediaPlayer.setDataSource(VIDEO_URL);
+            mMediaPlayer.setDisplay(holder);
+            mMediaPlayer.prepareAsync();
+            mMediaPlayer.setOnBufferingUpdateListener(this);
+            mMediaPlayer.setOnCompletionListener(this);
+            mMediaPlayer.setOnPreparedListener(this);
+            mMediaPlayer.setOnVideoSizeChangedListener(this);
+            setVolumeControlStream(AudioManager.STREAM_MUSIC);
+
+        } catch (Exception e) {
+            Log.e(LOG_TAG, "error: " + e.getMessage(), e);
+        }
+
     }
     public void registerUSBDataReceiver(){
         //Registering Local Broadcast Receiver for data over USB
@@ -331,8 +379,107 @@ public class H2OBotStartActivity extends Activity {
 	}
 
     @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterUSBDataReceiver();
+
+        //Video
+        releaseMediaPlayer();
+        doCleanUp();
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
         unregisterUSBDataReceiver();
+
+        //Video
+        releaseMediaPlayer();
+        doCleanUp();
     }
+
+
+
+    //Video call back methods
+
+
+
+    @Override
+    public void surfaceCreated(SurfaceHolder surfaceHolder) {
+        Log.d(LOG_TAG, "surfaceCreated called");
+        playVideo();
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder surfaceHolder, int i, int i2, int i3) {
+
+        Log.d(LOG_TAG, "surfaceChanged called");
+
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+        Log.d(LOG_TAG, "surfaceDestroyed called");
+    }
+
+    @Override
+    public void onBufferingUpdate(MediaPlayer mp, int percent) {
+
+    }
+
+    @Override
+    public void onCompletion(MediaPlayer mp) {
+
+    }
+
+    @Override
+    public void onPrepared(MediaPlayer mp) {
+        Log.d(LOG_TAG, "onPrepared called");
+        mIsVideoReadyToBePlayed = true;
+        if (mIsVideoReadyToBePlayed && mIsVideoSizeKnown) {
+            startVideoPlayback();
+        }
+
+    }
+
+    @Override
+    public void onVideoSizeChanged(MediaPlayer mp, int width, int height) {
+        Log.v(LOG_TAG, "onVideoSizeChanged called");
+        if (width == 0 || height == 0) {
+            Log.e(LOG_TAG, "invalid video width(" + width + ") or height(" + height + ")");
+            return;
+        }
+        mIsVideoSizeKnown = true;
+        mVideoWidth = width;
+        mVideoHeight = height;
+        if (mIsVideoReadyToBePlayed && mIsVideoSizeKnown) {
+            startVideoPlayback();
+        }
+
+    }
+
+
+    private void releaseMediaPlayer() {
+        if (mMediaPlayer != null) {
+            mMediaPlayer.release();
+            mMediaPlayer = null;
+        }
+    }
+
+    private void doCleanUp() {
+        mVideoWidth = 0;
+        mVideoHeight = 0;
+        mIsVideoReadyToBePlayed = false;
+        mIsVideoSizeKnown = false;
+    }
+
+    private void startVideoPlayback() {
+        Log.v(LOG_TAG, "startVideoPlayback");
+        holder.setFixedSize(mVideoWidth, mVideoHeight);
+        mMediaPlayer.start();
+    }
+
+
+
+
 }
